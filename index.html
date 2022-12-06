@@ -1,1 +1,535 @@
-"Hello World" 
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Project 2</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+	<style>
+
+		.header {
+		    grid-area: header;
+		    background-color: #D8DCE1;
+		    height: 80px;
+		}
+
+		#title { 
+			font-size: 1.5em;
+			margin-left: 20px;
+			float: left;
+			margin-top: 20px;
+		}
+
+		.header h3 { 
+			display: inline; 
+			text-align: right;
+			float: right;
+			margin-right: 20px;
+			margin-top: 25px; 
+		}
+
+    	text { 
+			font-family: Arial; 
+			font-size: 15px;
+		}
+		.axis path, .axis line {
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+		.tick text {
+			fill: black;
+			font-size: 11px;
+		}
+
+		rect {
+			stroke: white;
+		}
+
+		.graph-tip {
+			color: white;
+			background-color: rgba(0,0,0,0.7);
+			padding-left: 10px;
+			padding-right: 10px;
+			padding-top: 5px;
+			padding-bottom: 5px;
+		}
+
+		#top_graphs {
+			height: 800px
+			width: 1000;
+			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
+			margin: 20px;
+			overflow: visible;
+		}
+
+		#bottom_graphs {
+			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
+			margin: 20px;
+		}
+
+		.column {
+		  	float: left;
+		  	width: 50%;
+		}
+
+		.row:after {
+		  	content: "";
+		  	display: table;
+		  	clear: both;
+		}
+
+		a {
+			text-decoration: none;
+		}
+
+		a:hover {
+			color: red;
+		}
+
+	</style>
+</head>
+<body>
+
+	<div class="header">
+		<h3 id="title">Madden 23 Player Data</h3>
+		<h3>Visualization by Charles May and Jonah Rockey<br><a href="documentation.html">Documentation</a></h3>
+	</div>
+
+	<!-- SVG's for age and gender bar graphs -->
+	<div id="top_graphs">
+
+	<!--
+	<svg id="age_graph" width="700" height="400">
+		<text id='label' x='350' y='170' style="font-weight: bold;">Death by Age</text>
+		<g transform="translate(150,450)"></g>
+	</svg>
+
+
+	<svg id="gender_graph" width="550" height="400">
+		<text id='label' x='190' y='100' style="font-weight: bold;">Death by Gender</text>
+		<g transform="translate(150,490)"></g>
+	</svg>
+	-->
+
+	</div>
+
+	<!-- Create day range sliders and update button -->
+	<div class="row" id="bottom_graphs">
+	<div class="column" id="bar_col"></div>
+	<div class="column" id="scattter_col">
+	
+	</div>
+	</div>
+	
+	<script>
+	    var CHART_WIDTH = 450;
+	    var CHART_HEIGHT = 450;
+	    
+	    // Load in data
+	    d3.csv("Madden23.csv", function(data) {
+		    madden_data = data;
+		    drawBar(madden_data)
+		});
+
+
+	    /*
+		// Create tip for map deaths to show age
+		var age_tip = d3.tip()
+			.attr('class', 'graph-tip')
+  			.offset([-10, 0])
+  			.html(function(d) 
+  			{
+    			return "<span><strong>Age: </strong>" + d.age_real + "</span>";
+  			});
+
+  		// Tip for timeline graph
+  		var timeline_tip = d3.tip()
+  			.attr('class', 'graph-tip')
+	  		.offset([-10, 0])
+  			.html(function(d) {
+    			return "<strong>Deaths on Day <span>" + d.day + ": </span></strong><span>" + d.deaths + "</span> <br> <strong>Cumulative Deaths: </strong> <span>" + d.total + "</span></br>";
+  			});
+		*/
+		
+	    function drawBar(data) 
+	    {
+
+	    	// Define the dimensions of the bar graph
+			var width = 600;
+			var height = 375;
+
+			// Create the svg element and set its dimensions
+			var svg = d3.select("body")
+			    .append("svg")
+			    .attr("width", width)
+			    .attr("height", height)
+			    .attr("overflow", "visible")
+			    .attr("transform", "translate(70,0)");
+
+			// Define the scales for the x and y axes
+			var xScale = d3.scaleLinear()
+			    .domain([20, d3.max(data, function(d) { 
+			    	return +d.overall_rating 
+			    })])
+			    .range([0, width]);
+
+			svg.append("g")
+			      .attr("transform", "translate(0," + height + ")")
+			      .call(d3.axisBottom(xScale));
+
+			  // set the parameters for the histogram
+			var histogram = d3.histogram()
+			      .value(function(d) { return d.overall_rating; })   // I need to give the vector of value
+			      .domain(xScale.domain())  // then the domain of the graphic
+			      .thresholds(xScale.ticks(70)); // then the numbers of bins
+
+			  // And apply this function to data to get the bins
+			var bins = histogram(data);
+
+			  // Y axis: scale and draw:
+			var yScale = d3.scaleLinear()
+			      .range([height, 0]);
+			      yScale.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
+			svg.append("g")
+			      .call(d3.axisLeft(yScale));
+
+			  // append the bar rectangles to the svg element
+			svg.selectAll("rect")
+			      .data(bins)
+			      .enter()
+			      .append("rect")
+			        .attr("x", 1)
+			        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
+			        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
+			        .attr("height", function(d) { return height - yScale(d.length); });
+
+
+			// Style the bar graph
+			svg.selectAll("g")
+			   .style("font-size", "12px")
+			   .style("font-family", "sans-serif")
+			   .style("color", "black");
+
+			// Add labels to the x and y axes
+			svg.append("text")
+			   .attr("x", width / 2)
+			   .attr("y", height + 50)
+			   .attr("text-anchor", "middle")
+			   .text("Player Rating");
+
+			svg.append("text")
+			   .attr("transform", "rotate(-90)")
+			   .attr("x", -height / 2)
+			   .attr("y", -50)
+			   .attr("text-anchor", "middle")
+			   .text("Frequency");
+	    }
+	   
+
+	    
+	    function drawDeaths(data) 
+	    {
+
+	    	// Create scales
+			var xScale = d3.scale.linear();
+			var yScale = d3.scale.linear();
+
+			xScale.domain([0,15]).range([0, CHART_WIDTH]);	
+			yScale.domain([15,0]).range( [0,CHART_HEIGHT]);
+
+	    	// Draw deaths with age tip
+			var circles = d3.select('#main')
+				.select('g')
+				.selectAll(".death_circ")
+				.data(data);
+			
+			circles.enter().append("circle")
+			  	.attr("r", 3)
+			  	.style("fill", function (d) {if(d.gender==0) return "rgb(238,68,47)"; else return "rgb(99,172,190)"})
+			  	.attr("class",function(d){ return "death_circ " + "circ_" + d.day });
+
+			circles
+			  	.attr("cx", function (d){ return xScale(d.x); })
+			  	.attr("cy", function (d){ return yScale(d.y); })
+			  	.call(age_tip)
+			  	.on('mouseover', age_tip.show)
+			  	.on('mouseout', age_tip.hide);
+
+			circles.exit().remove();
+	    }
+
+
+
+	    function drawTimeline() 
+	    {
+
+	    	// Create SVG
+	    	var g = d3.select("#timeline_col")				
+			    .append("svg")
+			    .attr("id","timeline")
+      			.attr("width", "700")
+                .attr("height", "700")
+     			.append("g")
+			  	.attr("transform","translate(50,510)");
+
+			// Create scales
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+
+			xScale.domain(deathdays.map(function(d) { return d.date; }))
+				.rangeRoundBands([0, 520], 0.1);
+			yScale.domain([0,15]).range([0,50]);		
+
+			var rect = d3.select('#timeline')
+				.select('g')
+				.selectAll(".bar1")
+				.data(deathdays);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom");
+
+  			d3.select('#timeline')
+  				.select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," +130 + ")")
+            	.call(xAxis)
+			  	.selectAll("text")
+   			   	.attr("y", 0)
+    			.attr("x", 9)
+   			   	.attr("dy", ".35em")
+    			.attr("transform", "rotate(90)")
+   			   	.style("text-anchor", "start");
+
+			rect.enter().append("rect")
+			  	.attr("width", 10)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			
+			// Position bars and increase the size of the corresponding dots
+			// on the map with mouseover
+			rect
+			  	.attr("class", "bar1")
+			  	.attr("x", function (d){ return xScale(d.date); })
+			  	.attr("y", function (d){ return 130-yScale(d.deaths); })
+			  	.call(timeline_tip)
+			  	.on('mouseover', function(d) {
+			  		timeline_tip.show(d, this);
+			  		d3.select(this).attr('fill', 'red');
+			  		d3.selectAll(".circ_" + d.day)
+						.attr('r', '8px')
+			  	})
+			  	.on('mouseout', function(d) {
+			  		timeline_tip.hide(d, this);
+			  		d3.select(this).attr('fill', 'black');
+			  		d3.selectAll(".circ_" + d.day)
+						.attr('r', '3px')
+			  	});
+
+			// Create functions that update day1 and day2 for range slider
+			function updateDay1(Day1) {
+  			  	// adjust the text on the range slider
+  				d3.select("#Day1-value").text(Day1);
+  			  	d3.select("#Day1").property("value", Day1);
+			}
+
+			function updateDay2(Day2) {
+				// adjust the text on the range slider
+  				d3.select("#Day2-value").text(Day2);
+  			  	d3.select("#Day2").property("value", Day2);  
+  			}
+
+  			// Update day1 and day2
+			d3.select("#Day1").on("input", function() {
+  			    day1=this.value
+			    updateDay1(+this.value);
+			});
+
+			d3.select("#Day2").on("input", function() {
+  			    day2=this.value
+			    updateDay2(+this.value);
+			});
+			
+			// Title
+			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.style("font-weight", "bold")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(220,-390)")
+  				.text("Timeline of Deaths per Day")
+	    }
+
+
+	    function drawAge()
+		{
+
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+
+			xScale.domain(death_ages.map(function(d) { return d.age; }))
+				.rangeRoundBands([0, 510], 0.1);
+			yScale.domain([0,200]).range( [0,150]);			
+
+			var rect = d3.select('#age_graph')
+				.select('g')
+				.selectAll(".bar2")
+				.data(death_ages);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom")			
+	  
+ 			d3.select('#age_graph').select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," +-130 + ")")
+            	.call(xAxis)
+			    .selectAll("text")
+   			    .attr("y", 13)
+    			.attr("x", -13)
+   			    .attr("dy", ".35em")
+    			.attr("transform", "rotate(0)")
+   			    .style("text-anchor", "start");
+		
+			rect.enter().append("rect")
+			  	.attr("width", 38)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			  
+			rect.attr("class", "bar2")
+				.attr("x", function (d) {return 17 + xScale(d.age); })
+				.attr("y", function (d){ return -130 - yScale(d.deaths); })
+
+			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(45,-245)")
+  				.text("142");
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(128,-175)")
+  				.text("48");
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(212,-183)")
+  				.text("58")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(296,-182)")
+  				.text("57")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(379,-208)")
+  				.text("91")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(461,-270)")
+  				.text("174")
+		}
+
+
+		function drawGender()
+		{
+
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+			
+			xScale.domain(gender.map(function(d) { return d.gender; }))
+				.rangeRoundBands([0, 210], 0.1);
+			yScale.domain([0,200]).range([0,150]);			
+
+			var rect = d3.select('#gender_graph')
+				.select('g')
+				.selectAll(".bar2")
+				.data(gender);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom")	
+
+    		d3.select('#gender_graph').select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," + -130 + ")")
+            	.call(xAxis)
+			    .selectAll("text")
+   			    .attr("y", 13)
+    			.attr("x", -13)
+   			    .attr("dy", ".35em")
+    			.attr("transform", "rotate(0)")
+   			    .style("text-anchor", "start");
+
+			rect.enter().append("rect")
+			   	.attr("width", 47)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			  	.style("fill", function (d){if(d.gender=='male') return "rgb(238,68,47)"; else return "rgb(99,172,190)"})
+
+			rect.attr("class", "bar2")
+			  	.attr("x", function (d) {return 19 + xScale(d.gender); })
+			  	.attr("y", function (d){ return -130 - yScale(d.deaths); })
+
+			d3.select('#gender_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(52,-353)")
+  				.text("284");
+
+  			d3.select('#gender_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(153,-355)")
+  				.text("287"); 
+		}	
+
+
+		// Function to update the map with new range of days
+		function updateMap(day1,day2) 
+		{
+
+			var start;
+			var end;
+			
+			for (let i = 0; i < deaths.length; i++) {
+  				if (deaths[i]['day'] >= parseInt(day1)) {
+  					start = i;
+  					break;
+  				}
+			}
+
+			for (let j = 0; j < deaths.length; j++) {
+  				if (deaths[j]['day'] > parseInt(day2)) {
+  					end = j;
+  					break;
+  				}
+			}
+
+			drawDeaths(deaths.slice(start, end));
+		}	
+
+	</script>
+</body>
+</html>

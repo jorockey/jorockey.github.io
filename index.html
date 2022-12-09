@@ -45,37 +45,19 @@
 			stroke: white;
 		}
 
-		.graph-tip {
-			color: white;
-			background-color: rgba(0,0,0,0.7);
-			padding-left: 10px;
-			padding-right: 10px;
-			padding-top: 5px;
-			padding-bottom: 5px;
-		}
-
 		#top_graphs {
-			height: 800px
-			width: 1000;
+			height: 500px;
+			width: 1200px;
 			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
 			margin: 20px;
 			overflow: visible;
 		}
 
 		#bottom_graphs {
+			height: 500px;
+			width: 1200px;
 			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
 			margin: 20px;
-		}
-
-		.column {
-		  	float: left;
-		  	width: 50%;
-		}
-
-		.row:after {
-		  	content: "";
-		  	display: table;
-		  	clear: both;
 		}
 
 		a {
@@ -97,7 +79,7 @@
 
 	<!-- SVG's for age and gender bar graphs -->
 	<div id="top_graphs">
-
+	<div id="dropdown_container"></div>
 	<!--
 	<svg id="age_graph" width="700" height="400">
 		<text id='label' x='350' y='170' style="font-weight: bold;">Death by Age</text>
@@ -115,37 +97,43 @@
 
 	<!-- Create day range sliders and update button -->
 	<div class="row" id="bottom_graphs">
-	<div class="column" id="bar_col"></div>
-	<div class="column" id="scattter_col">
 	
 	</div>
 	</div>
-	<div id="dropdown_container"></div>
+	
 	
 	<script>
 	    // Load in data
 	    d3.csv("Madden23.csv", function(data) {
 		    madden_data = data;
-		    drawBar(madden_data, "WR", false);
-		    drawDrop(madden_data)
+		    drawBar(madden_data, "All", false);
+		    drawDrop(madden_data);
+		    drawHeight(madden_data, "All", false);
 		});
 
 		
 	    function drawDrop(data) {
 		    const positions = [...new Set(data.map(item => item.position))];
+		    positions.unshift("All")
 
 		    var onchange = function() {
-                    var position = d3.select(this).property('value');
+                var position = d3.select(this).property('value');
+                if (position === "All") {
+                	drawBar(data, position, false);
+                	drawHeight(madden_data, position, false);
+                } else {
                     drawBar(data, position, true);
-                };
+                    drawHeight(madden_data, position, true);
+                }
+            };
 
 			var select = d3.select('#dropdown_container')
-			  .append('select')
+				.append('select')
 			  	.attr('class','select')
 			    .on('change', onchange);
 
 			var options = select
-			  .selectAll('option')
+			  	.selectAll('option')
 				.data(positions).enter()
 				.append('option')
 				.text(function (d) { return d; });
@@ -155,7 +143,8 @@
 	    function drawBar(data, position, positional) 
 	    {
 
-	    	d3.selectAll("svg").remove();
+	    	d3.select("svg").remove();
+
 	    	// Define the dimensions of the bar graph
 			var width = 600;
 			var height = 375;
@@ -165,10 +154,8 @@
 					{ return d.Position === position; });
 			}
 			
-		
-			
 			// Create the svg element and set its dimensions
-			var svg = d3.select("body")
+			var svg = d3.select("#top_graphs")
 			    .append("svg")
 			    .attr("width", width)
 			    .attr("height", height)
@@ -251,100 +238,81 @@
 			}
 	    }
 
-	    function drawStackedBar(data, position) 
+	    
+	    function drawHeight(data, position, positional) 
 	    {
-	    	// Define the dimensions of the bar graph
-			var width = 600;
-			var height = 375;
-			console.log();
-			
-			// Create the svg element and set its dimensions
-			var svg = d3.select("body")
-			    .append("svg")
-			    .attr("width", width)
-			    .attr("height", height)
-			    .attr("overflow", "visible")
-			    .attr("transform", "translate(70,0)");
 
-			// Define the scales for the x and y axes
+	    	d3.select("#height-weight").remove();
+			// Define the dimensions of the scatterplot
+			var width = 400;
+			var height = 400;
+			const positions_c = [...new Set(data.map(item => item.position))];
+
+			var svg = d3.select("#bottom_graphs")
+			  .append("svg")
+			  .attr("id", "height-weight")
+			  .attr("width", width)
+			  .attr("height", height)
+			  .attr("overflow", "visible")
+			  .attr("transform", "translate(70, 30)");
+
+			// Define linear scales for the x and y axes
 			var xScale = d3.scaleLinear()
-			    .domain([20, d3.max(data, function(d) { 
-			    	return +d.overall_rating 
-			    })])
-			    .range([0, width]);
+			  .domain([60, 82])
+			  .range([0, width]);
 
-			svg.append("g")
-			      .attr("transform", "translate(0," + height + ")")
-			      .call(d3.axisBottom(xScale));
-
-			  // set the parameters for the histogram
-			var histogram = d3.histogram()
-			      .value(function(d) { return d.overall_rating; })  
-			      .domain(xScale.domain())  
-			      .thresholds(xScale.ticks(70)); 
-
-			  // And apply this function to data to get the bins
-			var bins = histogram(data);
-
-			  // Y axis: scale and draw:
 			var yScale = d3.scaleLinear()
-			      .range([height, 0]);
-			      yScale.domain([0, d3.max(bins, function(d) { return d.length; })]);  
-			
+			  .domain([140, 400])
+			  .range([height, 0]);
+
+			var color = d3.scaleOrdinal()
+			    .domain(positions_c)
+			    .range(["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", 
+			    	"#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#800000", "#aaffc3"])
+
+			// Add circles to the SVG for each player
+			svg.selectAll("circle")
+			  .data(data)
+			  .enter()
+			  .append("circle")
+			  .attr("class", function(d){ return "circ_" + d.Position })
+			  .attr("cx", d => xScale(d.height))
+			  .attr("cy", d => yScale(d.weight))
+			  .attr("r", 3)
+			  .attr('fill-opacity', 0.5);
+			  //.style("fill", function (d) { return color(d.Position) });
+
+			if (positional) {
+				d3.selectAll(".circ_" + position)
+					.attr('r', '6px')
+					.attr("fill", "red");
+			}
+
+			// Add x and y axes to the scatterplot
+			var xAxis = d3.axisBottom(xScale);
+			var yAxis = d3.axisLeft(yScale);
+
 			svg.append("g")
-			    .call(d3.axisLeft(yScale));
+			  .attr("transform", "translate(0," + height + ")")
+			  .call(xAxis);
 
-			var b = svg.selectAll(".bars")
-			    .data(bins)
-			    .enter().append("b")
-
-			  // append the bar rectangles to the svg element
-			b.append("rect")
-			        .attr("x", 1)
-			        .attr("class", "bar1")
-			        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
-			        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
-			        .attr("height", function(d) { return height - yScale(d.length); });
-
-			//if (redraw) {
-
-			
-
-			data_filtered = data.filter(function(d) 
-					{ return d.Position === position; });
-			var bins_filter = histogram(data_filtered);
-			svg.selectAll("rect")
-			      .data(bins_filter)
-			      .enter()
-			      .append("rect")
-			        .attr("x", 1)
-			        .attr("class", "bar2")
-			        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
-			        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
-			        .attr("height", function(d) { return height - yScale(d.length); })
-			        .style("color", "blue");
-			//}
-
-			
-			// Style the bar graph
-			svg.selectAll("g")
-			   .style("font-size", "12px")
-			   .style("font-family", "sans-serif")
-			   .style("color", "black");
+			svg.append("g")
+			  .call(yAxis);
 
 			// Add labels to the x and y axes
 			svg.append("text")
 			   .attr("x", width / 2)
 			   .attr("y", height + 50)
 			   .attr("text-anchor", "middle")
-			   .text("Player Rating");
+			   .text("Height");
 
 			svg.append("text")
 			   .attr("transform", "rotate(-90)")
 			   .attr("x", -height / 2)
 			   .attr("y", -50)
 			   .attr("text-anchor", "middle")
-			   .text("Frequency");
+			   .text("Weight");
+
 	    }
 	   
 

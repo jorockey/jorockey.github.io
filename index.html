@@ -3,7 +3,6 @@
 <head>
 	<title>Project 2</title>
 	<script src="https://d3js.org/d3.v4.min.js"></script>
-	<script src="https://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
 	<style>
 
 		.header {
@@ -79,31 +78,15 @@
 
 	<!-- SVG's for age and gender bar graphs -->
 	<div id="top_graphs">
-	<div id="dropdown_container"></div>
-	<!--
-	<svg id="age_graph" width="700" height="400">
-		<text id='label' x='350' y='170' style="font-weight: bold;">Death by Age</text>
-		<g transform="translate(150,450)"></g>
-	</svg>
-
-
-	<svg id="gender_graph" width="550" height="400">
-		<text id='label' x='190' y='100' style="font-weight: bold;">Death by Gender</text>
-		<g transform="translate(150,490)"></g>
-	</svg>
-	-->
-
+	<div id="dropdown_container">
+	</div>
 	</div>
 
-	<!-- Create day range sliders and update button -->
 	<div class="row" id="bottom_graphs">
-	
 	</div>
-	</div>
-	
 	
 	<script>
-	    // Load in data
+	    // Load in data and call functions
 	    d3.csv("Madden23.csv", function(data) {
 		    madden_data = data;
 		    drawBar(madden_data, "All", false);
@@ -113,6 +96,8 @@
 
 		
 	    function drawDrop(data) {
+
+		    // Get list of positions
 		    const positions = [...new Set(data.map(item => item.position))];
 		    positions.unshift("All")
 
@@ -140,8 +125,7 @@
 		}
 
 		
-	    function drawBar(data, position, positional) 
-	    {
+	    function drawBar(data, position, positional) {
 
 	    	d3.select("svg").remove();
 
@@ -164,42 +148,41 @@
 
 			// Define the scales for the x and y axes
 			var xScale = d3.scaleLinear()
-			    .domain([20, d3.max(data, function(d) { 
-			    	return +d.overall_rating 
-			    })])
+			    .domain([20, d3.max(data, function(d) 
+			    	{ return +d.overall_rating })])
 			    .range([0, width]);
 
 			svg.append("g")
-			      .attr("transform", "translate(0," + height + ")")
-			      .call(d3.axisBottom(xScale));
+			    .attr("transform", "translate(0," + height + ")")
+			    .call(d3.axisBottom(xScale));
 
-			  // set the parameters for the histogram
+			// set the parameters for the histogram
 			var histogram = d3.histogram()
-			      .value(function(d) { return d.overall_rating; })  
-			      .domain(xScale.domain())  
-			      .thresholds(xScale.ticks(70)); 
+			    .value(function(d) { return d.overall_rating; })  
+			    .domain(xScale.domain())  
+			    .thresholds(xScale.ticks(70)); 
 
-			  // And apply this function to data to get the bins
+			// Apply this function to data to get the bins
 			var bins = histogram(data);
 
-			  // Y axis: scale and draw:
+			// Y axis: scale and draw:
 			var yScale = d3.scaleLinear()
-			      .range([height, 0]);
+			    .range([height, 0]);
 
 			yScale.domain([0, d3.max(bins, function(d) { return d.length; })]);
 
 			svg.append("g")
-			      .call(d3.axisLeft(yScale));
+			    .call(d3.axisLeft(yScale));
 
-			  // append the bar rectangles to the svg element
+			// Append the bar rectangles to the svg element
 			svg.selectAll("rect")
-			      .data(bins)
-			      .enter()
-			      .append("rect")
-			        .attr("x", 1)
-			        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
-			        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
-			        .attr("height", function(d) { return height - yScale(d.length); });
+			    .data(bins)
+			    .enter()
+			    .append("rect")
+		        .attr("x", 1)
+		        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
+		        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
+		        .attr("height", function(d) { return height - yScale(d.length); });
 
 			
 			// Style the bar graph
@@ -208,7 +191,7 @@
 			   .style("font-family", "sans-serif")
 			   .style("color", "black");
 
-			// Add labels to the x and y axes
+			// Add labels to the x and y axes along with title
 			svg.append("text")
 			   .attr("x", width / 2)
 			   .attr("y", height + 50)
@@ -224,17 +207,17 @@
 
 			if (positional) {
 				svg.append("text")
-			   	.attr("x", width / 2)
-			   	.attr("y", height - 400)
-			   	.attr("text-anchor", "middle")
-			   	.text("Rating Distribution for " + position + " Position");
+			   		.attr("x", width / 2)
+			   		.attr("y", height - 400)
+			   		.attr("text-anchor", "middle")
+			   		.text("Rating Distribution for " + position + " Position");
 
 			} else {
 				svg.append("text")
-			   	.attr("x", width / 2)
-			   	.attr("y", height - 400)
-			   	.attr("text-anchor", "middle")
-			   	.text("Rating Distribution for All Positions");
+			   		.attr("x", width / 2)
+			   		.attr("y", height - 400)
+			   		.attr("text-anchor", "middle")
+			   		.text("Rating Distribution for All Positions");
 			}
 	    }
 
@@ -243,45 +226,49 @@
 	    {
 
 	    	d3.select("#height-weight").remove();
+
 			// Define the dimensions of the scatterplot
 			var width = 400;
 			var height = 400;
 			const positions_c = [...new Set(data.map(item => item.position))];
 
 			var svg = d3.select("#bottom_graphs")
-			  .append("svg")
-			  .attr("id", "height-weight")
-			  .attr("width", width)
-			  .attr("height", height)
-			  .attr("overflow", "visible")
-			  .attr("transform", "translate(70, 30)");
+			  	.append("svg")
+			  	.attr("id", "height-weight")
+			  	.attr("width", width)
+			  	.attr("height", height)
+			  	.attr("overflow", "visible")
+			  	.attr("transform", "translate(70, 30)");
 
 			// Define linear scales for the x and y axes
 			var xScale = d3.scaleLinear()
-			  .domain([60, 82])
-			  .range([0, width]);
+			  	.domain([60, 82])
+			  	.range([0, width]);
 
 			var yScale = d3.scaleLinear()
-			  .domain([140, 400])
-			  .range([height, 0]);
+			  	.domain([140, 400])
+			  	.range([height, 0]);
 
+			/* Color scale for positions
 			var color = d3.scaleOrdinal()
 			    .domain(positions_c)
 			    .range(["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", 
-			    	"#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#800000", "#aaffc3"])
+			    	"#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#800000", "#aaffc3"]);
+			*/
 
 			// Add circles to the SVG for each player
 			svg.selectAll("circle")
-			  .data(data)
-			  .enter()
-			  .append("circle")
-			  .attr("class", function(d){ return "circ_" + d.Position })
-			  .attr("cx", d => xScale(d.height))
-			  .attr("cy", d => yScale(d.weight))
-			  .attr("r", 3)
-			  .attr('fill-opacity', 0.5);
-			  //.style("fill", function (d) { return color(d.Position) });
+				.data(data)
+				.enter()
+				.append("circle")
+				.attr("class", function(d){ return "circ_" + d.Position })
+				.attr("cx", d => xScale(d.height))
+				.attr("cy", d => yScale(d.weight))
+				.attr("r", 3)
+				.attr('fill-opacity', 0.5);
+				//.style("fill", function (d) { return color(d.Position) });
 
+			// Increase size of circles of certain position
 			if (positional) {
 				d3.selectAll(".circ_" + position)
 					.attr('r', '6px')
@@ -293,25 +280,40 @@
 			var yAxis = d3.axisLeft(yScale);
 
 			svg.append("g")
-			  .attr("transform", "translate(0," + height + ")")
-			  .call(xAxis);
+			  	.attr("transform", "translate(0," + height + ")")
+			  	.call(xAxis);
 
 			svg.append("g")
-			  .call(yAxis);
+			  	.call(yAxis);
 
 			// Add labels to the x and y axes
 			svg.append("text")
 			   .attr("x", width / 2)
 			   .attr("y", height + 50)
 			   .attr("text-anchor", "middle")
-			   .text("Height");
+			   .text("Height in inches");
 
 			svg.append("text")
 			   .attr("transform", "rotate(-90)")
 			   .attr("x", -height / 2)
 			   .attr("y", -50)
 			   .attr("text-anchor", "middle")
-			   .text("Weight");
+			   .text("Weight in pounds");
+
+			if (positional) {
+				svg.append("text")
+			   		.attr("x", width / 2)
+			   		.attr("y", height - 400)
+			   		.attr("text-anchor", "middle")
+			   		.text("Height vs. Weight for " + position + " Position");
+
+			} else {
+				svg.append("text")
+			   		.attr("x", width / 2)
+			   		.attr("y", height - 400)
+			   		.attr("text-anchor", "middle")
+			   		.text("Height vs. Weight for All Positions");
+			}
 
 	    }
 	   

@@ -94,7 +94,6 @@
     		my_html += "<p>" + data.yearsPro + "&nbspYears Pro</p>";
     		var money = data.totalSalary.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     		my_html += "<p>Salary:&nbsp$" + money + "&nbspper year</p>";
-    		my_html += "<p>College:&nbsp" + data['college'] + "</p>";
 			
 			document.getElementById('info').innerHTML = my_html;
     	}

@@ -18,6 +18,11 @@
 			font-size: 15px;
 		}
 
+		#info p { 
+			font-family: Arial; 
+			font-size: 18px;
+		}
+
 		#title { 
 			font-size: 1.5em;
 			margin-left: 20px;
@@ -27,8 +32,9 @@
 
 		#info {
 		  	float: left;
-		  	width: 50%;
+		  	width: 40%;
 		  	margin: 20px;
+		  	margin-right: 0px; 
 		}
 
 		#ratings-bar {
@@ -77,9 +83,17 @@
 
     		// Function to write html code to print information about the player
     		var my_html = "<h2>#"+ data.jerseyNum + "&nbsp &nbsp" + data['Full Name'] + 
-    		"&nbsp &nbsp &nbsp" + data['overall_rating'] + " OVR</h2>";
-    		my_html += "<p>Team:&nbsp" + data['Team'] + "</p>";
-    		my_html += "<p>Position:&nbsp" + data['Position'] + "</p>";
+    		"&nbsp &nbsp &nbsp" + data.overall_rating + " OVR</h2><br><br>";
+    		my_html += "<p>Position:&nbsp" + data.Position + "</p>";
+    		var feet = Math.floor(data.height/12);
+    		var inches = data.height % 12;
+    		my_html += "<p>" + feet + "'"+ inches+ "\" &nbsp&nbsp|&nbsp&nbsp" + data.weight + 
+    		"&nbsppounds&nbsp&nbsp|&nbsp&nbsp" + data.age + "&nbspyears old</p>";
+    		my_html += "<p>Team:&nbsp" + data.Team + "</p>";
+    		my_html += "<p>College:&nbsp" + data.college + "</p>";
+    		my_html += "<p>" + data.yearsPro + "&nbspYears Pro</p>";
+    		var money = data.totalSalary.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    		my_html += "<p>Salary:&nbsp$" + money + "&nbspper year</p>";
     		my_html += "<p>College:&nbsp" + data['college'] + "</p>";
 			
 			document.getElementById('info').innerHTML = my_html;

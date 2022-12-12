@@ -74,6 +74,7 @@
 	<div class="header">
 		<h3 id="title">Madden 23 Player Data</h3>
 		<h3>Visualization by Charles May and Jonah Rockey<br><a href="documentation.html">Documentation</a></h3>
+		<a href="player.html?primaryKey=1327">Player page</a>
 	</div>
 
 	<!-- SVG's for age and gender bar graphs -->
@@ -268,7 +269,7 @@
 				.attr('fill-opacity', 0.5);
 				//.style("fill", function (d) { return color(d.Position) });
 
-			// Increase size of circles of certain position
+			// Increase size and color of circles when highlighting a certain position
 			if (positional) {
 				d3.selectAll(".circ_" + position)
 					.attr('r', '6px')
@@ -286,7 +287,7 @@
 			svg.append("g")
 			  	.call(yAxis);
 
-			// Add labels to the x and y axes
+			// Add labels to the x and y axes as well as title
 			svg.append("text")
 			   .attr("x", width / 2)
 			   .attr("y", height + 50)
@@ -300,21 +301,12 @@
 			   .attr("text-anchor", "middle")
 			   .text("Weight in pounds");
 
-			if (positional) {
-				svg.append("text")
-			   		.attr("x", width / 2)
-			   		.attr("y", height - 400)
-			   		.attr("text-anchor", "middle")
-			   		.text("Height vs. Weight for " + position + " Position");
-
-			} else {
-				svg.append("text")
-			   		.attr("x", width / 2)
-			   		.attr("y", height - 400)
-			   		.attr("text-anchor", "middle")
-			   		.text("Height vs. Weight for All Positions");
-			}
-
+			
+			svg.append("text")
+			   	.attr("x", width / 2)
+			   	.attr("y", height - 400)
+				.attr("text-anchor", "middle")
+		   		.text("Height vs. Weight");
 	    }
 	   
 

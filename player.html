@@ -3,8 +3,20 @@
 <head>
 	<title>Player Profile</title>
 	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/0.10.0/lodash.min.js"></script>
 
 	<style>
+
+		.header {
+		    grid-area: header;
+		    background-color: #D8DCE1;
+		    height: 80px;
+		}
+
+		text { 
+			font-family: Arial; 
+			font-size: 15px;
+		}
 
 		#title { 
 			font-size: 1.5em;
@@ -12,18 +24,201 @@
 			float: left;
 			margin-top: 20px;
 		}
-		
+
+		#info {
+		  	float: left;
+		  	width: 50%;
+		  	margin: 20px;
+		}
+
+		#ratings-bar {
+		  	float: right;
+		  	width: 50%;
+		}
+
 	</style>
-
-
 </head>
+
 <body>
 	
 	<div class="header">
 		<h3 id="title">Madden 23 Player Profile</h3>
 	</div>
 
+	<div id="info"></div>
+	<div id="ratings-bar"></div>
 
+	<script>
+		
+		// Function to retreive parameter
+		function getParameterByName(name, url) {
+	        if (!url) url = window.location.href;
+	        name = name.replace(/[\[\]]/g, '\\$&');
+	        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+	            results = regex.exec(url);
+	        if (!results) return null;
+	        if (!results[2]) return '';
+	        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    	}
+
+    	var primaryKey = getParameterByName('primaryKey');
+    	
+    	// Load data, create player variable, and call functions
+    	d3.csv("Madden23.csv", function(data) {
+		    madden_data = data;
+		    var player = madden_data.filter(function(d) 
+		    	{ return d.primaryKey === primaryKey; })[0];
+			drawBar(player)
+			drawInfo(player)
+		});
+
+    	
+    	function drawInfo(data) {
+
+    		// Function to write html code to print information about the player
+    		var my_html = "<h2>#"+ data.jerseyNum + "&nbsp &nbsp" + data['Full Name'] + 
+    		"&nbsp &nbsp &nbsp" + data['overall_rating'] + " OVR</h2>";
+    		my_html += "<p>Team:&nbsp" + data['Team'] + "</p>";
+    		my_html += "<p>Position:&nbsp" + data['Position'] + "</p>";
+    		my_html += "<p>College:&nbsp" + data['college'] + "</p>";
+			
+			document.getElementById('info').innerHTML = my_html;
+    	}
+		
+
+		function drawBar(data) {
+
+			// Create object that indicates which rating attributes are
+			// most important based on each position
+			var ratings = {
+			"QB": ["speed_rating", "awareness_rating", "throwPower_rating", "playAction_rating", 
+			"throwAccuracyShort_rating", "throwAccuracyDeep_rating", "throwUnderPressure_rating", "throwOnTheRun_rating"],
+			"WR": ["speed_rating", "catching_rating", "catchInTraffic_rating", "release_rating", "shortRouteRunning_rating",
+			"mediumRouteRunning_rating", "deepRouteRunning_rating"],
+			"RE": ["speed_rating", "strength_rating", "awareness_rating","finesseMoves_rating", "powerMoves_rating", 
+			"blockShedding_rating", "tackle_rating"],
+			"LT": ["strength_rating", "awareness_rating","passBlock_rating", "runBlock_rating", 
+			"impactBlocking_rating", "leadBlock_rating"],
+			"CB": ["speed_rating", "awareness_rating", "manCoverage_rating", "playRecognition_rating", 
+			"zoneCoverage_rating", "tackle_rating"],
+			"TE": ["speed_rating", "strength_rating", "awareness_rating", "catching_rating", 
+			"catchInTraffic_rating", "runBlock_rating"],
+			"RG": ["strength_rating", "awareness_rating", "passBlock_rating", "runBlock_rating", 
+			"impactBlocking_rating", "leadBlock_rating"],
+			"HB": ["speed_rating", "awareness_rating", "carrying_rating", "breakTackle_rating",
+			"agility_rating", "spinMove_rating"],
+			"LOLB": ["speed_rating", "strength_rating", "tackle_rating", "playRecognition_rating",
+			"pursuit_rating", "hitPower_rating"],
+			"LG": ["strength_rating", "awareness_rating", "passBlock_rating", "runBlock_rating", 
+			"impactBlocking_rating", "leadBlock_rating"],
+			"MLB": ["speed_rating", "strength_rating", "tackle_rating", "playRecognition_rating",
+			"pursuit_rating", "hitPower_rating"],
+			"SS": ["speed_rating", "awareness_rating", "zoneCoverage_rating", "manCoverage_rating",
+			"pursuit_rating", "playRecognition_rating"],
+			"DT": ["strength_rating", "awareness_rating", "blockShedding_rating", "tackle_rating",
+			"powerMoves_rating", "finesseMoves_rating"],
+			"FS": ["speed_rating", "awareness_rating", "zoneCoverage_rating", "manCoverage_rating",
+			"pursuit_rating", "playRecognition_rating"],
+			"ROLB": ["speed_rating", "strength_rating", "tackle_rating", "playRecognition_rating",
+			"pursuit_rating", "hitPower_rating"],
+			"RT": ["strength_rating", "awareness_rating","passBlock_rating", "runBlock_rating", 
+			"impactBlocking_rating", "leadBlock_rating"],
+			"LE": ["speed_rating", "strength_rating", "awareness_rating","finesseMoves_rating", "powerMoves_rating", 
+			"blockShedding_rating", "tackle_rating"],
+			"K": ["kickAccuracy_rating", "kickPower_rating", "awareness_rating"],
+			"C": ["strength_rating", "awareness_rating", "passBlock_rating", "runBlock_rating",
+			"impactBlocking_rating", "runBlockPower_rating"],
+			"FB": ["speed_rating", "strength_rating", "runBlock_rating", "carrying_rating",
+			"leadBlock_rating", "trucking_rating"],
+			"P": ["kickPower_rating", "kickAccuracy_rating", "awareness_rating"]
+			}
+
+			// Create a subset of the player object with correct attributes
+			var player_ratings = ratings[data.position]
+			var subset = _.pick(data, player_ratings);
+
+			// Convert to data array
+			const data_new = Object.entries(subset).map(([key, value]) => ({
+			  key: key,
+			  value: value
+			}));
+
+			// Now that the data is ready, we can make the bar chart
+			var margin = {
+	            top: 15,
+	            right: 25,
+	            bottom: 15,
+	            left: 60
+	        };
+
+	        var width = 720 - margin.left - margin.right,
+	            height = 375 - margin.top - margin.bottom;
+
+	        var svg = d3.select("#ratings-bar").append("svg")
+	            .attr("width", width + margin.left + margin.right)
+	            .attr("height", height + margin.top + margin.bottom)
+	            .attr("overflow", "visible")
+	            .append("g")
+	            .attr("transform", "translate(0, 150)");
+
+	        var x = d3.scaleLinear()
+	            .range([0, width])
+	            .domain([50, d3.max(data_new, function (d) {
+	                return d.value;
+	            })]);
+
+	        var y = d3.scaleBand()
+	            .rangeRound([height, 0])
+	            .domain(data_new.map(function (d) {
+	                return d.key;
+	            }));
+
+	        //make y axis to show bar names
+			var yAxis = d3.axisLeft(y);
+
+			svg.append("g")
+			  	.call(yAxis);
+
+	        var bars = svg.selectAll(".bar")
+	            .data(data_new)
+	            .enter()
+	            .append("g")
+
+	        //append rects
+	        bars.append("rect")
+	            .attr("class", "bar")
+	            .attr("y", function (d) {
+	                return y(d.key)+12.5;
+	            })
+	            //.attr("height", y.bandwidth())
+	            .attr("height", y.bandwidth()-25)
+	            .attr("x", 0)
+	            .attr("fill", "rgb(122,166,232)")
+	            .attr("width", function (d) {
+	                return x(d.value);
+	            });
+
+	        //add a value label to the right of each bar
+	        bars.append("text")
+	            .attr("class", "label")
+	            //y position of the label is halfway down the bar
+	            .attr("y", function (d) {
+	                return y(d.key) + y.bandwidth() / 2 + 4;
+	            })
+	            //x position is 3 pixels to the right of the bar
+	            .attr("x", function (d) {
+	                return x(d.value) + 3;
+	            })
+	            .text(function (d) {
+	                return d.value;
+	            });
+
+
+		}
+
+		
+
+	</script>
 
 </body>
 </html>

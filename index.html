@@ -45,10 +45,12 @@
 		}
 
 		#top_graphs {
-			height: 500px;
+			height: 525px;
 			width: 1200px;
 			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
 			margin: 20px;
+			margin-top: 50px;
+			margin-bottom: 80px;
 			overflow: visible;
 		}
 
@@ -57,6 +59,16 @@
 			width: 1200px;
 			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
 			margin: 20px;
+		}
+
+		#dist {
+		  	float: left;
+		  	width: 50%;
+		}
+
+		#weight {
+		  	float: right;
+		  	width: 50%;
 		}
 
 		.tooltip {
@@ -81,13 +93,18 @@
 		<h3>Visualization by Charles May and Jonah Rockey<br><a href="documentation.html">Documentation</a></h3>
 	</div>
 
-	<!-- SVG's for age and gender bar graphs -->
+	<!-- Organize divs for different graphs -->
 	<div id="top_graphs">
-	<div id="dropdown_container">
-	</div>
+
+		<div class="row" id="dist"></div>
+		<div id="weight">
+			<div id="dropdown_container"></div>
+		</div>
+
 	</div>
 
 	<div class="row" id="bottom_graphs">
+		<div id="team_dropdown"></div>
 	</div>
 	
 	<script>
@@ -97,6 +114,8 @@
 		    drawBar(madden_data, "All", false);
 		    drawDrop(madden_data);
 		    drawHeight(madden_data, "All", false);
+		    drawGraph(madden_data, "Rams");
+		    drawTeamDrop(madden_data);
 		});
 
 		
@@ -110,10 +129,10 @@
                 var position = d3.select(this).property('value');
                 if (position === "All") {
                 	drawBar(data, position, false);
-                	drawHeight(madden_data, position, false);
+                	drawHeight(data, position, false);
                 } else {
                     drawBar(data, position, true);
-                    drawHeight(madden_data, position, true);
+                    drawHeight(data, position, true);
                 }
             };
 
@@ -129,13 +148,37 @@
 				.text(function (d) { return d; });
 		}
 
+
+		function drawTeamDrop(data) {
+
+		    // Get list of positions
+		    const teams = [...new Set(data.map(item => item.Team))];
+
+		    var onchange = function() {
+                var team = d3.select(this).property('value');
+                drawGraph(data, team);
+                //drawHeight(madden_data, team, true);
+            };
+
+			var select = d3.select('#team_dropdown')
+				.append('select')
+			  	.attr('class','select')
+			    .on('change', onchange);
+
+			var options = select
+			  	.selectAll('option')
+				.data(teams).enter()
+				.append('option')
+				.text(function (d) { return d; });
+		}
+
 		
 	    function drawBar(data, position, positional) {
 
 	    	d3.select("svg").remove();
 
 	    	// Define the dimensions of the bar graph
-			var width = 600;
+			var width = 550;
 			var height = 375;
 			
 			if (positional) {
@@ -144,12 +187,12 @@
 			}
 			
 			// Create the svg element and set its dimensions
-			var svg = d3.select("#top_graphs")
+			var svg = d3.select("#dist")
 			    .append("svg")
 			    .attr("width", width)
 			    .attr("height", height)
 			    .attr("overflow", "visible")
-			    .attr("transform", "translate(70,30)");
+			    .attr("transform", "translate(70,60)");
 
 			// Define the scales for the x and y axes
 			var xScale = d3.scaleLinear()
@@ -187,7 +230,8 @@
 		        .attr("x", 1)
 		        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
 		        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
-		        .attr("height", function(d) { return height - yScale(d.length); });
+		        .attr("height", function(d) { return height - yScale(d.length); })
+		        .attr("fill", "#69b3a2");;
 
 			
 			// Style the bar graph
@@ -239,13 +283,13 @@
 			var height = 400;
 			const positions_c = [...new Set(data.map(item => item.position))];
 
-			var svg = d3.select("#bottom_graphs")
+			var svg = d3.select("#weight")
 			  	.append("svg")
 			  	.attr("id", "height-weight")
 			  	.attr("width", width)
 			  	.attr("height", height)
 			  	.attr("overflow", "visible")
-			  	.attr("transform", "translate(70, 30)");
+			  	.attr("transform", "translate(150, 20)");
 
 			// Define linear scales for the x and y axes
 			var xScale = d3.scaleLinear()
@@ -337,6 +381,96 @@
 			   	.attr("y", height - 400)
 				.attr("text-anchor", "middle")
 		   		.text("Height vs. Weight");
+	    }
+
+
+	    function drawGraph(data, team) {
+
+	    	d3.select("#team-dist").remove();
+
+	    	// set the dimensions and margins of the graph
+			var margin = {top: 30, right: 30, bottom: 70, left: 60},
+	    	width = 600 - margin.left - margin.right,
+	    	height = 400 - margin.top - margin.bottom;
+			
+			// Filter the data
+			data = data.filter(function(d) 
+				{ return d.Team === team; });
+			
+			// Create the svg element and set its dimensions
+			var svg = d3.select("#bottom_graphs")
+			    .append("svg")
+			    .attr("id", "team-dist")
+			    .attr("width", width + margin.left + margin.right)
+	    		.attr("height", height + margin.top + margin.bottom)
+			    .attr("overflow", "visible")
+			    .attr("transform", "translate(300,80)");
+
+			// Define the scales for the x and y axes
+			var xScale = d3.scaleLinear()
+			    .domain([20, d3.max(data, function(d) 
+			    	{ return +d.overall_rating })])
+			    .range([0, width]);
+
+			svg.append("g")
+			    .attr("transform", "translate(0," + height + ")")
+			    .call(d3.axisBottom(xScale));
+
+			// set the parameters for the histogram
+			var histogram = d3.histogram()
+			    .value(function(d) { return d.overall_rating; })  
+			    .domain(xScale.domain())  
+			    .thresholds(xScale.ticks(70)); 
+
+			// Apply this function to data to get the bins
+			var bins = histogram(data);
+
+			// Y axis: scale and draw:
+			var yScale = d3.scaleLinear()
+			    .range([height, 0]);
+
+			yScale.domain([0, d3.max(bins, function(d) { return d.length; })]);
+
+			svg.append("g")
+			    .call(d3.axisLeft(yScale));
+
+			// Bars
+			svg.selectAll("rect")
+			    .data(bins)
+			    .enter()
+			    .append("rect")
+		        .attr("x", 1)
+		        .attr("transform", function(d) { return "translate(" + xScale(d.x0) + "," + yScale(d.length) + ")"; })
+		        .attr("width", function(d) { return xScale(d.x1) - xScale(d.x0) -1 ; })
+		        .attr("height", function(d) { return height - yScale(d.length); })
+		        .attr("fill", "#69b3a2");
+
+			
+			svg.selectAll("g")
+			   .style("font-size", "12px")
+			   .style("font-family", "sans-serif")
+			   .style("color", "black");
+
+			// Add labels to the x and y axes along with title
+			svg.append("text")
+			   .attr("x", width / 2)
+			   .attr("y", height + 50)
+			   .attr("text-anchor", "middle")
+			   .text("Player Rating");
+
+			svg.append("text")
+			   .attr("transform", "rotate(-90)")
+			   .attr("x", -height / 2)
+			   .attr("y", -50)
+			   .attr("text-anchor", "middle")
+			   .text("Frequency");
+
+			
+			svg.append("text")
+		   		.attr("x", width / 2)
+		   		.attr("y", height - 325)
+		   		.attr("text-anchor", "middle")
+			   	.text("Team Rating Distribution for " + team);	
 	    }
 	   
 

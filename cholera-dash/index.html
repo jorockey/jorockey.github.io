@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Project 1</title>
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src="https://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+	<style>
+
+		.header {
+		    grid-area: header;
+		    background-color: #D8DCE1;
+		    height: 80px;
+		}
+
+		#title { 
+			font-size: 1.5em;
+			margin-left: 20px;
+			float: left;
+			margin-top: 20px;
+		}
+
+		.header h3 { 
+			display: inline; 
+			text-align: right;
+			float: right;
+			margin-right: 20px;
+			margin-top: 25px; 
+		}
+
+    	text { 
+			font-family: Arial; 
+			font-size: 15px;
+		}
+		.axis path, .axis line {
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+		.tick text {
+			fill: black;
+			font-size: 11px;
+		}
+
+		rect {
+			stroke: white;
+		}
+
+		.graph-tip {
+			color: white;
+			background-color: rgba(0,0,0,0.7);
+			padding-left: 10px;
+			padding-right: 10px;
+			padding-top: 5px;
+			padding-bottom: 5px;
+		}
+
+		#top_graphs {
+			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
+			margin: 20px;
+		}
+
+		#bottom_graphs {
+			box-shadow: 0 4px 8px 0 rgb(0 0 0 / 20%), 0 6px 20px 0 rgb(0 0 0 / 19%);
+			margin: 20px;
+		}
+
+		.column {
+		  	float: left;
+		  	width: 50%;
+		}
+
+		.row:after {
+		  	content: "";
+		  	display: table;
+		  	clear: both;
+		}
+
+		a {
+			text-decoration: none;
+		}
+
+		a:hover {
+			color: red;
+		}
+
+	</style>
+</head>
+<body>
+
+	<div class="header">
+		<h3 id="title">London's 1854 Cholera Epidemic</h3>
+		<h3>Visualization by Jonah Rockey<br><a href="documentation.html">Documentation</a></h3>
+	</div>
+
+	<!-- SVG's for age and gender bar graphs -->
+	<div id="top_graphs">
+
+	<svg id="age_graph" width="700" height="400">
+		<text id='label' x='350' y='170' style="font-weight: bold;">Death by Age</text>
+		<g transform="translate(150,450)"></g>
+	</svg>
+
+	<svg id="gender_graph" width="550" height="400">
+		<text id='label' x='190' y='100' style="font-weight: bold;">Death by Gender</text>
+		<g transform="translate(150,490)"></g>
+	</svg>
+
+	</div>
+
+	<!-- Create day range sliders and update button -->
+	<div class="row" id="bottom_graphs">
+
+	<div class="column" id="timeline_col"></div>
+	<div class="column" id="map_col">
+	<p style="position: relative; right: 345px; top: 150px">
+  	<label for="Day1" 
+         style="display: inline-block; width: 240px; text-align: right">
+         Start Day: <span id="Day1-value">…</span>
+  	</label>
+  	<input type="range" min="1" max="42" id="Day1">
+	</p>
+ 
+	<p style="position: relative; right: 345px; top: 150px">
+	  <label for="Day2" 
+	         style="display: inline-block; width: 240px; text-align: right">
+	         End Day: <span id="Day2-value">…</span>
+	  </label>
+	  <input type="range" min="1" max="42" id="Day2">
+	</p>
+	
+	<div id="option" style = "position :relative; right: 190px; top: 150px">
+	    <input name="updateButton" 
+	           type="button" 
+	           value="Update Map" 
+	           onclick="updateMap(day1,day2)" />
+	</div>
+	</div>
+	</div>
+	
+	<script>
+	    var CHART_WIDTH = 450;
+	    var CHART_HEIGHT = 450;
+	    
+	    // Load in data
+	    d3.csv("pumps.csv", function(data) {
+		    pumps_data = data;
+		});
+		    	
+		d3.csv("workhouse.csv", function(data) {
+		    workhouse_data = data;
+		});
+
+		d3.csv("brewery.csv", function(data) {
+			brewery_data = data;
+		});
+
+		d3.csv("deaths_age_sex.csv", function(data) {
+		    deaths = data;
+		});
+		    	
+		d3.json("streets.json",function(data) {
+		    streets = data;
+		    Map(deaths);
+	    });
+
+	    d3.csv("deathdays.csv", function(data){
+		    deathdays = data
+		    drawTimeline();
+	   	});
+
+	   	d3.csv("age_distribution.csv", function(data){
+	   		death_ages = data;
+			drawAge();
+		});
+
+		d3.csv("gender_distribution.csv", function(data){
+			gender = data;
+			drawGender();
+		});
+
+
+		// Create tip for map deaths to show age
+		var age_tip = d3.tip()
+			.attr('class', 'graph-tip')
+  			.offset([-10, 0])
+  			.html(function(d) 
+  			{
+    			return "<span><strong>Age: </strong>" + d.age_real + "</span>";
+  			});
+
+  		// Tip for timeline graph
+  		var timeline_tip = d3.tip()
+  			.attr('class', 'graph-tip')
+	  		.offset([-10, 0])
+  			.html(function(d) {
+    			return "<strong>Deaths on Day <span>" + d.day + ": </span></strong><span>" + d.deaths + "</span> <br> <strong>Cumulative Deaths: </strong> <span>" + d.total + "</span></br>";
+  			});
+
+		
+	    function Map(data) 
+	    {
+
+	    	// Create scales
+			var xScale = d3.scale.linear();
+			var yScale = d3.scale.linear();
+
+			xScale.domain([0,15]).range([0, CHART_WIDTH]);	
+			yScale.domain([15,0]).range( [0,CHART_HEIGHT]);
+
+	    	// Create SVG and draw the map
+	    	var g = d3.select("#map_col")				
+			    .append("svg")
+			    .attr("id","main")
+			    .attr("width", "550")
+                .attr("height", "700")
+			    .call(d3.behavior.zoom().on("zoom", function () {
+       			    g.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+      			}))
+      			.append("g")
+			 	.attr("transform","translate(-50,168) ");
+
+	    	var lines_path = d3.svg.line()
+				.x(function(d) { return xScale(d.x); })
+				.y(function(d) { return yScale(d.y); });
+
+			g.selectAll(".line")
+   	 			.data(streets)
+    			.enter().append("path")
+    			.style('fill', 'none')
+    			.style('stroke', 'black')
+    			.style('stroke-width', '1.5px')
+    			.attr("class", "map")
+    			.attr("d", lines_path)
+
+    		// Draw death dots
+    		drawDeaths(data)
+
+    		// Draw pumps as black rectangles
+    		var pumps = d3.select('#main')
+    			.select('g')
+    			.selectAll(".pump_rect").data(pumps_data);
+			
+			pumps.enter().append("rect")
+			  	.attr("height", 12)
+			  	.attr("width", 12)
+			  	.style("fill", "black")
+			  	.attr("class","pump_rect");
+
+			pumps
+			  	.attr("x", function (d) { return xScale(d.x)-6; })
+			  	.attr("y", function (d) { return yScale(d.y)-6; });
+
+
+			// Draw workhouse 
+			var work = d3.select('#main')
+				.select('g')
+				.selectAll(".work_circ")
+				.data(workhouse_data);
+			
+			work.enter().append("circle")
+			  	.attr("r", 13)
+			  	.style("fill", "green")
+			  	.attr("class","work_circ");
+
+			work
+			  	.attr("cx", function (d){ return xScale(d.x); })
+			  	.attr("cy", function (d){ return yScale(d.y); });
+
+			
+			// Draw brewery
+			var brewery = d3.select('#main')
+				.select('g')
+				.selectAll(".circle_b")
+				.data(brewery_data);
+			
+			brewery.enter().append("circle")
+			  	.attr("r", 10)
+			  	.style("fill", "grey")
+			  	.attr("class","circle_b");
+
+			brewery
+			  	.attr("cx", function (d){ return xScale(d.x); })
+			  	.attr("cy", function (d){ return yScale(d.y); });
+
+			
+			// Draw three major street names
+			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(225,135) rotate(60)")
+  				.text("Regent Street");
+
+			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(303,-55) rotate(-10)")
+  				.text("Oxford Street");
+
+			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(506,-8) rotate(67)")
+  				.text("Dean Street")
+
+  			// Draw title
+  			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.style("font-weight", "bold")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(355,-160)")
+  				.text("Map of London")
+	    }
+	   
+
+	    function drawDeaths(data) 
+	    {
+
+	    	// Create scales
+			var xScale = d3.scale.linear();
+			var yScale = d3.scale.linear();
+
+			xScale.domain([0,15]).range([0, CHART_WIDTH]);	
+			yScale.domain([15,0]).range( [0,CHART_HEIGHT]);
+
+	    	// Draw deaths with age tip
+			var circles = d3.select('#main')
+				.select('g')
+				.selectAll(".death_circ")
+				.data(data);
+			
+			circles.enter().append("circle")
+			  	.attr("r", 3)
+			  	.style("fill", function (d) {if(d.gender==0) return "rgb(238,68,47)"; else return "rgb(99,172,190)"})
+			  	.attr("class",function(d){ return "death_circ " + "circ_" + d.day });
+
+			circles
+			  	.attr("cx", function (d){ return xScale(d.x); })
+			  	.attr("cy", function (d){ return yScale(d.y); })
+			  	.call(age_tip)
+			  	.on('mouseover', age_tip.show)
+			  	.on('mouseout', age_tip.hide);
+
+			circles.exit().remove();
+	    }
+
+
+
+	    function drawTimeline() 
+	    {
+
+	    	// Create SVG
+	    	var g = d3.select("#timeline_col")				
+			    .append("svg")
+			    .attr("id","timeline")
+      			.attr("width", "700")
+                .attr("height", "700")
+     			.append("g")
+			  	.attr("transform","translate(50,510)");
+
+			// Create scales
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+
+			xScale.domain(deathdays.map(function(d) { return d.date; }))
+				.rangeRoundBands([0, 520], 0.1);
+			yScale.domain([0,15]).range([0,50]);		
+
+			var rect = d3.select('#timeline')
+				.select('g')
+				.selectAll(".bar1")
+				.data(deathdays);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom");
+
+  			d3.select('#timeline')
+  				.select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," +130 + ")")
+            	.call(xAxis)
+			  	.selectAll("text")
+   			   	.attr("y", 0)
+    			.attr("x", 9)
+   			   	.attr("dy", ".35em")
+    			.attr("transform", "rotate(90)")
+   			   	.style("text-anchor", "start");
+
+			rect.enter().append("rect")
+			  	.attr("width", 10)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			
+			// Position bars and increase the size of the corresponding dots
+			// on the map with mouseover
+			rect
+			  	.attr("class", "bar1")
+			  	.attr("x", function (d){ return xScale(d.date); })
+			  	.attr("y", function (d){ return 130-yScale(d.deaths); })
+			  	.call(timeline_tip)
+			  	.on('mouseover', function(d) {
+			  		timeline_tip.show(d, this);
+			  		d3.select(this).attr('fill', 'red');
+			  		d3.selectAll(".circ_" + d.day)
+						.attr('r', '8px')
+			  	})
+			  	.on('mouseout', function(d) {
+			  		timeline_tip.hide(d, this);
+			  		d3.select(this).attr('fill', 'black');
+			  		d3.selectAll(".circ_" + d.day)
+						.attr('r', '3px')
+			  	});
+
+			// Create functions that update day1 and day2 for range slider
+			function updateDay1(Day1) {
+  			  	// adjust the text on the range slider
+  				d3.select("#Day1-value").text(Day1);
+  			  	d3.select("#Day1").property("value", Day1);
+			}
+
+			function updateDay2(Day2) {
+				// adjust the text on the range slider
+  				d3.select("#Day2-value").text(Day2);
+  			  	d3.select("#Day2").property("value", Day2);  
+  			}
+
+  			// Update day1 and day2
+			d3.select("#Day1").on("input", function() {
+  			    day1=this.value
+			    updateDay1(+this.value);
+			});
+
+			d3.select("#Day2").on("input", function() {
+  			    day2=this.value
+			    updateDay2(+this.value);
+			});
+			
+			// Title
+			g.append("text")
+  				.style("fill", "black")
+  				.style("font-size", "16px")
+  				.style("font-weight", "bold")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(220,-390)")
+  				.text("Timeline of Deaths per Day")
+	    }
+
+
+	    function drawAge()
+		{
+
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+
+			xScale.domain(death_ages.map(function(d) { return d.age; }))
+				.rangeRoundBands([0, 510], 0.1);
+			yScale.domain([0,200]).range( [0,150]);			
+
+			var rect = d3.select('#age_graph')
+				.select('g')
+				.selectAll(".bar2")
+				.data(death_ages);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom")			
+	  
+ 			d3.select('#age_graph').select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," +-130 + ")")
+            	.call(xAxis)
+			    .selectAll("text")
+   			    .attr("y", 13)
+    			.attr("x", -13)
+   			    .attr("dy", ".35em")
+    			.attr("transform", "rotate(0)")
+   			    .style("text-anchor", "start");
+		
+			rect.enter().append("rect")
+			  	.attr("width", 38)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			  
+			rect.attr("class", "bar2")
+				.attr("x", function (d) {return 17 + xScale(d.age); })
+				.attr("y", function (d){ return -130 - yScale(d.deaths); })
+
+			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(45,-245)")
+  				.text("142");
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(128,-175)")
+  				.text("48");
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(212,-183)")
+  				.text("58")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(296,-182)")
+  				.text("57")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(379,-208)")
+  				.text("91")
+
+  			d3.select('#age_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(461,-270)")
+  				.text("174")
+		}
+
+
+		function drawGender()
+		{
+
+			var xScale = d3.scale.ordinal();
+			var yScale = d3.scale.linear();
+			
+			xScale.domain(gender.map(function(d) { return d.gender; }))
+				.rangeRoundBands([0, 210], 0.1);
+			yScale.domain([0,200]).range([0,150]);			
+
+			var rect = d3.select('#gender_graph')
+				.select('g')
+				.selectAll(".bar2")
+				.data(gender);
+
+			var xAxis = d3.svg.axis()
+    			.scale(xScale)
+    		 	.orient("bottom")	
+
+    		d3.select('#gender_graph').select('g').append('g')
+      			.attr("class", "axis")
+      			.attr("transform","translate(0," + -130 + ")")
+            	.call(xAxis)
+			    .selectAll("text")
+   			    .attr("y", 13)
+    			.attr("x", -13)
+   			    .attr("dy", ".35em")
+    			.attr("transform", "rotate(0)")
+   			    .style("text-anchor", "start");
+
+			rect.enter().append("rect")
+			   	.attr("width", 47)
+			  	.attr("height", function (d){return yScale(d.deaths); }) 
+			  	.style("fill", function (d){if(d.gender=='male') return "rgb(238,68,47)"; else return "rgb(99,172,190)"})
+
+			rect.attr("class", "bar2")
+			  	.attr("x", function (d) {return 19 + xScale(d.gender); })
+			  	.attr("y", function (d){ return -130 - yScale(d.deaths); })
+
+			d3.select('#gender_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(52,-353)")
+  				.text("284");
+
+  			d3.select('#gender_graph').select('g').append('text')
+		      	.style("fill", "black")
+  				.style("font-size", "16px")
+  				.attr("dy", ".35em")
+ 		 		.attr("text-anchor", "middle")
+  				.attr("transform", "translate(153,-355)")
+  				.text("287"); 
+		}	
+
+
+		// Function to update the map with new range of days
+		function updateMap(day1,day2) 
+		{
+
+			var start;
+			var end;
+			
+			for (let i = 0; i < deaths.length; i++) {
+  				if (deaths[i]['day'] >= parseInt(day1)) {
+  					start = i;
+  					break;
+  				}
+			}
+
+			for (let j = 0; j < deaths.length; j++) {
+  				if (deaths[j]['day'] > parseInt(day2)) {
+  					end = j;
+  					break;
+  				}
+			}
+
+			drawDeaths(deaths.slice(start, end));
+		}	
+
+	</script>
+</body>
+</html>

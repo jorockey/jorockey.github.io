@@ -413,6 +413,7 @@ img {
 .thumbnail .title {
   text-transform: uppercase;
   margin: 0 2em;
+  text-align: center;
   display: block;
   text-indent: 0;
 }
